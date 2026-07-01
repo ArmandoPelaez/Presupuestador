@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum CatalogItemType {
+  PRODUCT
+  SERVICE
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+}
+
+enum DiscountType {
+  NONE
+  PERCENTAGE
+  FIXED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  businessName String?
+  taxId        String?
+  customers    Customer[]
+  catalogItems CatalogItem[]
+  quotes       Quote[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Customer {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  businessName String?
+  email        String?
+  phone        String?
+  taxId        String?
+  address      String?
+  notes        String?
+  isActive     Boolean  @default(true)
+  quotes       Quote[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, name])
+  @@index([userId, isActive])
+}
+
+model CatalogItem {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        CatalogItemType
+  name        String
+  description String?
+  unit        String
+  unitPrice   Decimal
+  taxRate     Decimal         @default(0)
+  isActive    Boolean         @default(true)
+  quoteItems  QuoteItem[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([userId, name])
+  @@index([userId, type, isActive])
+}
+
+model Quote {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId    String
+  customer      Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  number        Int
+  status        QuoteStatus  @default(DRAFT)
+  issueDate     DateTime
+  validUntil    DateTime?
+  currency      String       @default("ARS")
+  notes         String?
+  discountType  DiscountType @default(NONE)
+  discountValue Decimal      @default(0)
+  subtotal      Decimal
+  discountTotal Decimal      @default(0)
+  taxTotal      Decimal      @default(0)
+  total         Decimal
+  items         QuoteItem[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([userId, number])
+  @@index([userId, status, issueDate])
+  @@index([customerId])
+}
+
+model QuoteItem {
+  id            String       @id @default(cuid())
+  quoteId       String
+  quote         Quote        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  catalogItemId String?
+  catalogItem   CatalogItem? @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+  description   String
+  quantity      Decimal
+  unit          String
+  unitPrice     Decimal
+  taxRate       Decimal      @default(0)
+  lineSubtotal  Decimal
+  lineTax       Decimal      @default(0)
+  lineTotal     Decimal
+  position      Int
+
+  @@unique([quoteId, position])
+  @@index([catalogItemId])
+}
