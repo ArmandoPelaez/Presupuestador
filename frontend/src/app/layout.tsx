@@ -4,7 +4,7 @@ import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "Presupuestador Pro",
+  title: "Presupuesto Simple",
   description: "Presupuestos profesionales para pequeños negocios",
 };
 

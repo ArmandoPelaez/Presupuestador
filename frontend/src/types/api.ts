@@ -24,9 +24,86 @@ export type CatalogItem = {
   id: string;
   type: "PRODUCT" | "SERVICE";
   name: string;
-  description?: string;
+  unitPrice: string;
+  stock: number;
+  isActive: boolean;
+};
+export type QuoteItem = {
+  id?: string;
+  catalogItemId?: string;
+  description: string;
+  quantity: string;
   unit: string;
   unitPrice: string;
   taxRate: string;
-  isActive: boolean;
+  lineSubtotal?: string;
+  lineTax?: string;
+  lineTotal?: string;
+  position: number;
+};
+export type Quote = {
+  id: string;
+  number: number;
+  status: "DRAFT" | "SENT" | "APPROVED" | "REJECTED";
+  customerId: string;
+  customer: Customer;
+  issueDate: string;
+  validUntil?: string;
+  notes?: string;
+  discountType: "NONE" | "PERCENTAGE" | "FIXED";
+  discountValue: string;
+  subtotal: string;
+  discountTotal: string;
+  taxTotal: string;
+  total: string;
+  items: QuoteItem[];
+  activeShare?: { publicUrl: string; expiresAt: string } | null;
+};
+
+export type QuoteShare = {
+  publicUrl: string;
+  expiresAt: string;
+};
+
+export type PublicQuoteDecision = "APPROVED" | "REJECTED";
+
+export type PublicQuote = {
+  number: number;
+  status: "SENT" | "APPROVED" | "REJECTED";
+  issueDate: string;
+  validUntil?: string;
+  currency: string;
+  notes?: string;
+  subtotal: string;
+  discountTotal: string;
+  taxTotal: string;
+  total: string;
+  user: { name: string; businessName?: string; taxId?: string };
+  customer: {
+    name: string;
+    businessName?: string;
+    taxId?: string;
+    address?: string;
+  };
+  items: Array<{
+    description: string;
+    quantity: string;
+    unit: string;
+    unitPrice: string;
+    taxRate: string;
+    lineSubtotal: string;
+    lineTax: string;
+    lineTotal: string;
+    position: number;
+  }>;
+  response: {
+    decision: PublicQuoteDecision;
+    respondedAt: string;
+  } | null;
+};
+
+export type PublicQuoteDecisionResult = {
+  status: "recorded" | "already_responded";
+  decision: PublicQuoteDecision;
+  respondedAt: string;
 };

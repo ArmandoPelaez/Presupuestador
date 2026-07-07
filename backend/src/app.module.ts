@@ -8,6 +8,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { QuotesModule } from './modules/quotes/quotes.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { CatalogModule } from './modules/catalog/catalog.module';
     AuthModule,
     CustomersModule,
     CatalogModule,
+    QuotesModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

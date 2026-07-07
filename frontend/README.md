@@ -2,6 +2,12 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+## Visual guardrail
+
+The app color palette is centralized in `src/app/globals.css`, in the `:root` section starting at line 53. New screens and components must consume those global tokens instead of hardcoding colors.
+
+Do not introduce standalone hex colors, custom gradients, or direct Tailwind color classes such as `blue-*`, `slate-*`, `emerald-*`, `red-*`, `amber-*`, `green-*`, `violet-*`, `purple-*`, or `lime-*` unless the color is first centralized in `globals.css`.
+
 First, run the development server:
 
 ```bash

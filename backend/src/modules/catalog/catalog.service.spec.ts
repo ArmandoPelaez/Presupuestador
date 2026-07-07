@@ -24,13 +24,12 @@ describe('CatalogService', () => {
   const service = new CatalogService(prisma as unknown as PrismaService);
   beforeEach(() => jest.clearAllMocks());
 
-  it('valida precios y porcentajes límite', async () => {
+  it('valida precio y stock no negativos', async () => {
     const invalid = plainToInstance(CreateCatalogItemDto, {
       type: CatalogItemType.PRODUCT,
       name: 'Item',
-      unit: 'u',
       unitPrice: '-1',
-      taxRate: '101',
+      stock: -1,
     });
     expect(await validate(invalid)).toHaveLength(2);
   });

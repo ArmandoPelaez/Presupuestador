@@ -31,7 +31,7 @@ export class CustomersService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.customer.findMany({
         where,
-        orderBy: { name: 'asc' },
+        orderBy: { createdAt: 'desc' },
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
       }),

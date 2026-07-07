@@ -10,6 +10,15 @@ const environmentSchema = z.object({
   JWT_SECRET: z.string().min(32).default('development-only-change-me-please'),
   JWT_EXPIRES_IN: z.string().min(2).default('15m'),
   PASSWORD_ROUNDS: z.coerce.number().int().min(10).max(14).default(12),
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
+  QUOTE_SHARE_DEFAULT_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  QUOTE_SHARE_COMMENT_MAX_LENGTH: z.coerce
+    .number()
+    .int()
+    .min(100)
+    .max(5000)
+    .default(1000),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

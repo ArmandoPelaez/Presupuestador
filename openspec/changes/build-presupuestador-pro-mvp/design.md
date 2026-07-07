@@ -131,6 +131,8 @@ Orden de cálculo: subtotal de línea = cantidad × precio; subtotal general = s
 
 El backend generará el PDF desde datos persistidos para asegurar consistencia y evitar diferencias entre navegadores. La plantilla incluirá identidad básica del negocio, número/estado/fechas, cliente, detalle de ítems, totales y notas. Se elegirá una biblioteca Node mantenida que funcione sin navegador pesado; la decisión final se tomará durante el spike de implementación.
 
+Decisión de implementación: se utiliza `pdfkit` en backend. Genera el documento por streaming, funciona sin Chromium ni navegador pesado y permite controlar saltos de página, encabezados y pies. Como límite, la plantilla usa coordenadas y no reutiliza el HTML/CSS del frontend; todo cambio visual debe verificarse sobre el PDF renderizado.
+
 Alternativa considerada: imprimir HTML desde el frontend. Se descarta porque dificulta obtener resultados reproducibles y asegurar que el documento corresponda al estado autorizado.
 
 ### 9. Estrategia de calidad

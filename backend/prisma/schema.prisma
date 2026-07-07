@@ -25,11 +25,17 @@ enum DiscountType {
   FIXED
 }
 
+enum QuoteDecision {
+  APPROVED
+  REJECTED
+}
+
 model User {
   id           String        @id @default(cuid())
   name         String
   email        String        @unique
-  passwordHash String
+  passwordHash String?
+  googleSubject String?       @unique
   businessName String?
   taxId        String?
   customers    Customer[]
@@ -60,19 +66,17 @@ model Customer {
 }
 
 model CatalogItem {
-  id          String          @id @default(cuid())
-  userId      String
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        CatalogItemType
-  name        String
-  description String?
-  unit        String
-  unitPrice   Decimal
-  taxRate     Decimal         @default(0)
-  isActive    Boolean         @default(true)
-  quoteItems  QuoteItem[]
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       CatalogItemType
+  name       String
+  unitPrice  Decimal
+  stock      Int             @default(0)
+  isActive   Boolean         @default(true)
+  quoteItems QuoteItem[]
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   @@index([userId, name])
   @@index([userId, type, isActive])
@@ -97,12 +101,30 @@ model Quote {
   taxTotal      Decimal      @default(0)
   total         Decimal
   items         QuoteItem[]
+  shareLinks    QuoteShareLink[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
   @@unique([userId, number])
   @@index([userId, status, issueDate])
   @@index([customerId])
+}
+
+model QuoteShareLink {
+  id          String         @id @default(cuid())
+  quoteId     String
+  quote       Quote          @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  tokenHash   String         @unique
+  tokenCiphertext String?
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  respondedAt DateTime?
+  decision    QuoteDecision?
+  comment     String?
+  createdAt   DateTime       @default(now())
+
+  @@index([quoteId, revokedAt, respondedAt])
+  @@index([expiresAt])
 }
 
 model QuoteItem {

@@ -18,17 +18,14 @@ export class CatalogService {
       isActive: q.isActive,
       ...(q.search?.trim()
         ? {
-            OR: [
-              { name: { contains: q.search.trim() } },
-              { description: { contains: q.search.trim() } },
-            ],
+            name: { contains: q.search.trim() },
           }
         : {}),
     };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.catalogItem.findMany({
         where,
-        orderBy: { name: 'asc' },
+        orderBy: { createdAt: 'desc' },
         skip: (q.page - 1) * q.pageSize,
         take: q.pageSize,
       }),
@@ -48,7 +45,7 @@ export class CatalogService {
     const item = await this.prisma.catalogItem.findFirst({
       where: { id, userId },
     });
-    if (!item) throw new NotFoundException('Concepto no encontrado');
+    if (!item) throw new NotFoundException('Producto o servicio no encontrado');
     return item;
   }
   async update(userId: string, id: string, data: UpdateCatalogItemDto) {

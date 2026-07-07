@@ -1,9 +1,13 @@
 import { CatalogList } from "@/components/catalog/catalog-list";
+import { PageHeader } from "@/components/layout/page-header";
 export default function Page() {
   return (
-    <>
-      <h1 className="mb-6 text-3xl font-bold">Productos y servicios</h1>
+    <div className="mx-auto w-full max-w-[1100px]">
+      <PageHeader
+        title="Productos y servicios"
+        description="Organizá los conceptos que usás en tus presupuestos"
+      />
       <CatalogList />
-    </>
+    </div>
   );
 }

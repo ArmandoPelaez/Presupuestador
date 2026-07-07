@@ -11,6 +11,17 @@ El sistema SHALL permitir que una persona cree una cuenta con nombre, email úni
 - **WHEN** una persona intenta iniciar sesión con email o contraseña incorrectos
 - **THEN** el sistema rechaza el acceso sin revelar cuál credencial falló
 
+### Requirement: Inicio de sesión con Google
+El sistema SHALL permitir iniciar sesión con una cuenta de Google cuyo ID token sea verificado por el backend para el cliente OAuth configurado.
+
+#### Scenario: Primera autenticación con Google
+- **WHEN** Google entrega un ID token válido con email verificado
+- **THEN** el sistema crea o vincula la cuenta usando el identificador estable `sub` y devuelve una sesión autenticada
+
+#### Scenario: Token de Google inválido
+- **WHEN** el token está vencido, tiene otra audiencia o no contiene un email verificado
+- **THEN** el sistema rechaza el acceso sin crear ni modificar una cuenta
+
 ### Requirement: Acceso mediante JWT
 El sistema SHALL exigir un JWT válido y no vencido para acceder a capacidades privadas.
 

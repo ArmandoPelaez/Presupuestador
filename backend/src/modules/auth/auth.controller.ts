@@ -11,6 +11,7 @@ import type { AuthenticatedUser } from '../../common/decorators/current-user.dec
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
@@ -26,6 +27,9 @@ export class AuthController {
   }
   @Post('login') login(@Body() dto: LoginDto) {
     return this.auth.login(dto);
+  }
+  @Post('google') google(@Body() dto: GoogleLoginDto) {
+    return this.auth.loginWithGoogle(dto.credential);
   }
 
   @Get('me')

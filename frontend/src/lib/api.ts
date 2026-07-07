@@ -26,6 +26,16 @@ export async function api<T>(
     message?: string | string[];
     details?: unknown;
   } | null;
+  if (
+    response.status === 401 &&
+    token &&
+    typeof window !== "undefined" &&
+    !path.startsWith("/auth/")
+  ) {
+    localStorage.removeItem("accessToken");
+    window.location.replace("/login");
+    return new Promise<T>(() => undefined);
+  }
   if (!response.ok)
     throw new ApiError(
       Array.isArray(data?.message)
@@ -34,5 +44,32 @@ export async function api<T>(
       response.status,
       data?.details,
     );
+  return data as T;
+}
+
+export async function publicApi<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const response = await fetch(`${env.NEXT_PUBLIC_API_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+  const data = (await response.json().catch(() => null)) as {
+    message?: string | string[];
+    details?: unknown;
+  } | null;
+  if (!response.ok) {
+    throw new ApiError(
+      Array.isArray(data?.message)
+        ? data.message.join(", ")
+        : (data?.message ?? "No se pudo completar la operación"),
+      response.status,
+      data?.details,
+    );
+  }
   return data as T;
 }
