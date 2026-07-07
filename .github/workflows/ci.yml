@@ -17,6 +17,8 @@ jobs:
           cache: npm
           cache-dependency-path: ${{ matrix.project }}/package-lock.json
       - run: npm ci
+      - if: matrix.project == 'backend'
+        run: npm run prisma:generate
       - run: npm run lint
       - run: npm run type-check
       - run: npm test

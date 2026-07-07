@@ -27,4 +27,4 @@ main()
     console.error(error);
     process.exitCode = 1;
   })
-  .finally(async () => prisma.$disconnect());
+  .finally(() => prisma.$disconnect());
