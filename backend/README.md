@@ -31,6 +31,38 @@
 $ npm install
 ```
 
+## AI-assisted quote drafts
+
+The authenticated endpoint `POST /api/ai/quote-drafts` generates an ephemeral
+quote draft from a free-text description. It does not create quotes, reserve
+quote numbers, change statuses, or persist quote items. The frontend must still
+open the normal quote form, and the existing quote creation endpoint remains the
+authority for validation, totals, numbering, and persistence.
+
+Configure the feature with:
+
+```env
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.4-mini
+AI_QUOTE_DRAFT_DESCRIPTION_MAX_LENGTH=2000
+AI_QUOTE_DRAFT_TIMEOUT_MS=15000
+```
+
+`OPENAI_API_KEY` is optional. When it is empty, the endpoint returns a
+recoverable "IA no configurada" error and users can keep creating quotes
+manually. `OPENAI_MODEL` defaults to `gpt-5.4-mini`; change it by environment
+only. The description length and timeout protect cost, latency, and availability.
+
+Privacy and logging rules for this flow:
+
+- Do not log full user descriptions, prompts, OpenAI responses, JWTs,
+  `OPENAI_API_KEY`, public quote tokens, token hashes, or share URLs.
+- Send only owner-scoped customer and catalog candidates needed for matching.
+- Treat the AI response as a suggestion. Prices without a catalog match remain
+  editable and are not authoritative.
+- Keep the draft ephemeral until the owner explicitly saves the normal quote
+  form.
+
 ## Compile and run the project
 
 ```bash

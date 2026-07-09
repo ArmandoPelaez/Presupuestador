@@ -12,11 +12,11 @@ const buttonVariants = cva(
         default:
           "bg-primary text-primary-foreground hover:bg-[var(--primary-hover)]",
         action:
-          "bg-primary text-white shadow-sm hover:bg-[var(--primary-hover)] focus-visible:border-primary focus-visible:ring-primary/30",
+          "bg-primary text-primary-foreground shadow-sm hover:bg-[var(--primary-hover)] focus-visible:border-primary focus-visible:ring-primary/30",
         success:
-          "bg-[var(--success)] text-white shadow-sm hover:bg-[color-mix(in_srgb,var(--success)_88%,#1F2937)] focus-visible:border-[var(--success)] focus-visible:ring-[color-mix(in_srgb,var(--success)_25%,transparent)]",
+          "bg-[var(--success)] text-primary-foreground shadow-sm hover:bg-[color-mix(in_srgb,var(--success)_88%,var(--foreground))] focus-visible:border-[var(--success)] focus-visible:ring-[color-mix(in_srgb,var(--success)_25%,transparent)]",
         outline:
-          "border-border bg-white text-foreground shadow-sm hover:border-primary hover:bg-background hover:text-primary aria-expanded:bg-background aria-expanded:text-primary dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-card text-foreground shadow-sm hover:border-primary hover:bg-background hover:text-primary aria-expanded:bg-background aria-expanded:text-primary dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:

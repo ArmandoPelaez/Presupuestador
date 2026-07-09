@@ -1,7 +1,9 @@
 "use client";
 
 import { api, ApiError } from "@/lib/api";
+import { generateAiQuoteDraft } from "@/lib/ai-quote-drafts";
 import type {
+  AiQuoteDraft,
   CatalogItem,
   Customer,
   Page,
@@ -9,6 +11,14 @@ import type {
   QuoteItem,
 } from "@/types/api";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,17 +37,25 @@ import {
   ReceiptText,
   Save,
   Search,
+  Sparkles,
   Trash2,
   UserRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const selectClass =
-  "h-12 w-full rounded-xl border border-border bg-white px-4 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/20";
+  "form-select h-12 w-full px-4";
+const compactSelectClass =
+  "form-select h-10 w-full px-3";
 
 type QuoteType = CatalogItem["type"];
 type WizardStep = 1 | 2 | 3;
 type ValidityDays = 7 | 14 | 30;
+
+type AiDraftReview = {
+  customerName: string;
+  warnings: string[];
+};
 
 const validityOptions: ValidityDays[] = [7, 14, 30];
 
@@ -64,7 +82,13 @@ function initialValidity(quote?: Quote): ValidityDays {
     : 14;
 }
 
-export function QuoteForm({ quote }: { quote?: Quote }) {
+export function QuoteForm({
+  quote,
+  initialAiDraftOpen = false,
+}: {
+  quote?: Quote;
+  initialAiDraftOpen?: boolean;
+}) {
   const [step, setStep] = useState<WizardStep>(1);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -88,6 +112,13 @@ export function QuoteForm({ quote }: { quote?: Quote }) {
   const [notes, setNotes] = useState(quote?.notes ?? "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(initialAiDraftOpen);
+  const [aiDescription, setAiDescription] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiDraftReview, setAiDraftReview] = useState<AiDraftReview | null>(
+    null,
+  );
 
   useEffect(() => {
     api<Page<Customer>>("/customers?pageSize=100").then((r) =>
@@ -157,6 +188,110 @@ export function QuoteForm({ quote }: { quote?: Quote }) {
     ]);
     setCatalogSearch("");
     setCatalogMenuOpen(false);
+  }
+
+  function changeItemCatalogMatch(index: number, catalogItemId: string) {
+    if (!catalogItemId) {
+      update(index, { catalogItemId: undefined });
+      return;
+    }
+
+    const catalogItem = catalog.find((item) => item.id === catalogItemId);
+    if (!catalogItem) return;
+
+    update(index, {
+      catalogItemId: catalogItem.id,
+      description: catalogItem.name,
+      unit: catalogItem.type === "PRODUCT" ? "unidad" : "servicio",
+      unitPrice: catalogItem.unitPrice,
+    });
+  }
+
+  function applyAiDraft(draft: AiQuoteDraft) {
+    const nextCustomerId =
+      draft.customerMatchId &&
+      customers.some((customer) => customer.id === draft.customerMatchId)
+        ? draft.customerMatchId
+        : "";
+
+    const nextItems = draft.items.map((item, position) => {
+      const matchedCatalogItem = item.catalogMatchId
+        ? catalog.find((catalogItem) => catalogItem.id === item.catalogMatchId)
+        : undefined;
+
+      return {
+        catalogItemId: matchedCatalogItem ? matchedCatalogItem.id : undefined,
+        description: matchedCatalogItem?.name ?? item.description,
+        quantity: String(item.quantity),
+        unit:
+          item.unit ||
+          (matchedCatalogItem?.type === "PRODUCT" ? "unidad" : "servicio"),
+        unitPrice: matchedCatalogItem?.unitPrice ?? "0",
+        taxRate: "0",
+        position,
+      };
+    });
+
+    const firstMatchedCatalogItem = nextItems
+      .map((item) =>
+        item.catalogItemId
+          ? catalog.find((catalogItem) => catalogItem.id === item.catalogItemId)
+          : undefined,
+      )
+      .find(Boolean);
+
+    if (firstMatchedCatalogItem) setQuoteType(firstMatchedCatalogItem.type);
+    setCustomerId(nextCustomerId);
+    setItems(nextItems);
+    setNotes(draft.notes);
+    if (validityOptions.includes(draft.validUntilDays as ValidityDays)) {
+      setValidityDays(draft.validUntilDays as ValidityDays);
+    }
+    setAiDraftReview({
+      customerName: draft.customerName,
+      warnings: draft.warnings,
+    });
+    setStep(1);
+    setError(
+      nextCustomerId
+        ? ""
+        : "Seleccioná un cliente para revisar el borrador generado con IA.",
+    );
+  }
+
+  async function requestAiDraft() {
+    setAiError("");
+    const description = aiDescription.trim();
+    if (description.length < 10) {
+      setAiError("Describí el trabajo con al menos 10 caracteres.");
+      return;
+    }
+
+    setAiBusy(true);
+    try {
+      const draft = await generateAiQuoteDraft(description);
+      applyAiDraft(draft);
+      setAiModalOpen(false);
+      setAiDescription("");
+    } catch (e) {
+      setAiError(
+        e instanceof ApiError
+          ? e.message
+          : "No se pudo generar el borrador. Podés intentarlo nuevamente.",
+      );
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  function discardAiDraft() {
+    setAiDraftReview(null);
+    setCustomerId(quote?.customerId ?? "");
+    setItems(quote?.items ?? []);
+    setNotes(quote?.notes ?? "");
+    setValidityDays(initialValidity(quote));
+    setError("");
+    setStep(1);
   }
 
   function changeQuoteType(type: QuoteType) {
@@ -276,6 +411,119 @@ export function QuoteForm({ quote }: { quote?: Quote }) {
 
   return (
     <div className="space-y-5">
+      {!quote && aiDraftReview && (
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex gap-3">
+              <span className="app-icon ai-icon size-9">
+                <Sparkles className="size-4" />
+              </span>
+              <div>
+                <p className="font-semibold">
+                  Borrador generado con IA para revisar
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Revisá cliente, ítems, precios, unidades, notas y validez
+                  antes de guardar.
+                </p>
+                {!customerId && aiDraftReview.customerName && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Cliente sugerido: {aiDraftReview.customerName}
+                  </p>
+                )}
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-9 px-3"
+              onClick={discardAiDraft}
+            >
+              Descartar
+            </Button>
+          </div>
+          {aiDraftReview.warnings.length > 0 && (
+            <ul className="mt-3 space-y-1 border-t border-border pt-3 text-sm text-muted-foreground">
+              {aiDraftReview.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <Dialog
+        open={aiModalOpen}
+        onOpenChange={(open) => {
+          if (aiBusy) return;
+          setAiModalOpen(open);
+          if (!open) setAiError("");
+        }}
+      >
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Crear presupuesto con IA</DialogTitle>
+            <DialogDescription>
+              Describí el trabajo y se va a preparar un borrador editable del
+              formulario.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Label htmlFor="aiDescription">Descripción del trabajo</Label>
+            <Textarea
+              id="aiDescription"
+              className="min-h-40"
+              value={aiDescription}
+              maxLength={2000}
+              disabled={aiBusy}
+              placeholder="Ej.: Presupuesto para Cliente ABC por 12 remeras estampadas y entrega esta semana..."
+              onChange={(event) => {
+                setAiDescription(event.target.value);
+                setAiError("");
+              }}
+            />
+            <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span>El borrador no se guarda automáticamente.</span>
+              <span>{aiDescription.length}/2000</span>
+            </div>
+            {aiError && (
+              <p
+                role="alert"
+                className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+              >
+                {aiError}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={aiBusy}
+              onClick={() => setAiModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="action"
+              className="ai-action-button"
+              disabled={aiBusy}
+              onClick={() => void requestAiDraft()}
+            >
+              {aiBusy ? (
+                "Generando..."
+              ) : (
+                <>
+                  <Sparkles />
+                  Generar borrador
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <StepProgress step={step} />
 
       {step === 1 && (
@@ -431,11 +679,12 @@ export function QuoteForm({ quote }: { quote?: Quote }) {
           </div>
 
           <div className="overflow-x-auto rounded-2xl border">
-            <table className="w-full min-w-[680px] table-fixed text-left text-sm">
+            <table className="w-full min-w-[980px] table-fixed text-left text-sm">
               <thead className="border-b bg-background text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="w-1/2 px-4 py-3">Descripción del ítem</th>
-                  <th className="w-32 px-4 py-3">Tipo</th>
+                  <th className="w-64 px-3 py-3">Catálogo</th>
+                  <th className="w-1/3 px-4 py-3">Descripción del ítem</th>
+                  <th className="w-32 px-3 py-3">Unidad</th>
                   <th className="w-28 px-3 py-3 text-center">Cant.</th>
                   <th className="w-44 px-3 py-3">Precio unitario</th>
                   <th className="w-14 px-3 py-3">
@@ -447,7 +696,7 @@ export function QuoteForm({ quote }: { quote?: Quote }) {
                 {items.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="h-36 px-6 text-center text-muted-foreground"
                     >
                       No hay ítems agregados. Usá “Agregar ítem” para
@@ -459,17 +708,44 @@ export function QuoteForm({ quote }: { quote?: Quote }) {
                   items.map((item, index) => (
                     <tr
                       key={item.id ?? `${item.catalogItemId}-${index}`}
-                      className="bg-white align-middle hover:bg-background"
+                      className="bg-card align-middle hover:bg-background"
                     >
-                      <td className="px-4 py-4">
-                        <p className="truncate font-semibold">
-                          {item.description}
-                        </p>
+                      <td className="px-3 py-3">
+                        <select
+                          aria-label={`Coincidencia de catálogo para ${item.description}`}
+                          className={compactSelectClass}
+                          value={item.catalogItemId ?? ""}
+                          onChange={(event) =>
+                            changeItemCatalogMatch(index, event.target.value)
+                          }
+                        >
+                          <option value="">Manual editable</option>
+                          {catalog.map((catalogItem) => (
+                            <option key={catalogItem.id} value={catalogItem.id}>
+                              {catalogItem.name}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="px-4 py-4">
-                        <span className="status-sent rounded-full px-2.5 py-1 text-xs font-semibold">
-                          {quoteType === "PRODUCT" ? "Producto" : "Servicio"}
-                        </span>
+                        <Input
+                          aria-label={`Descripción de ${item.description}`}
+                          className="h-10"
+                          value={item.description}
+                          onChange={(event) =>
+                            update(index, { description: event.target.value })
+                          }
+                        />
+                      </td>
+                      <td className="px-3 py-3">
+                        <Input
+                          aria-label={`Unidad de ${item.description}`}
+                          className="h-10"
+                          value={item.unit}
+                          onChange={(event) =>
+                            update(index, { unit: event.target.value })
+                          }
+                        />
                       </td>
                       <td className="px-3 py-3">
                         <Input

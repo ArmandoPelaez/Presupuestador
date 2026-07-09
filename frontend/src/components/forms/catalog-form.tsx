@@ -58,7 +58,7 @@ export function CatalogForm({ item }: { item?: CatalogItem }) {
             onChange={(event) =>
               setType(event.target.value as CatalogItem["type"])
             }
-            className="h-12 w-full rounded-xl border border-border bg-white px-4 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-3 focus:ring-primary/20"
+            className="form-select h-12 w-full px-4"
           >
             <option value="PRODUCT">Producto</option>
             <option value="SERVICE">Servicio</option>

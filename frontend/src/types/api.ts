@@ -60,6 +60,22 @@ export type Quote = {
   activeShare?: { publicUrl: string; expiresAt: string } | null;
 };
 
+export type AiQuoteDraftItem = {
+  description: string;
+  quantity: number;
+  unit: string;
+  catalogMatchId: string | null;
+};
+
+export type AiQuoteDraft = {
+  customerName: string;
+  customerMatchId: string | null;
+  items: AiQuoteDraftItem[];
+  notes: string;
+  validUntilDays: number | null;
+  warnings: string[];
+};
+
 export type QuoteShare = {
   publicUrl: string;
   expiresAt: string;

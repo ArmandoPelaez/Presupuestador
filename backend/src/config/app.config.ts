@@ -15,4 +15,10 @@ export default registerAs('app', () => ({
   quoteShareCommentMaxLength: Number(
     process.env.QUOTE_SHARE_COMMENT_MAX_LENGTH ?? 1000,
   ),
+  openAiApiKey: process.env.OPENAI_API_KEY,
+  openAiModel: process.env.OPENAI_MODEL ?? 'gpt-5.4-mini',
+  aiQuoteDraftDescriptionMaxLength: Number(
+    process.env.AI_QUOTE_DRAFT_DESCRIPTION_MAX_LENGTH ?? 2000,
+  ),
+  aiQuoteDraftTimeoutMs: Number(process.env.AI_QUOTE_DRAFT_TIMEOUT_MS ?? 15000),
 }));

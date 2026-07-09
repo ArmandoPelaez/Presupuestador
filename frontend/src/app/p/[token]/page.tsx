@@ -102,10 +102,10 @@ export default function PublicQuotePage() {
   return (
     <main className="min-h-screen bg-background px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-4xl space-y-5">
-        <header className="rounded-3xl bg-[var(--total)] p-6 text-white shadow-lg sm:p-8">
+        <header className="app-quote-header p-6 sm:p-8">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="flex items-center gap-2 text-sm font-semibold text-white/85">
+              <p className="flex items-center gap-2 text-sm font-semibold text-primary-foreground/85">
                 <Building2 className="size-4" />
                 {businessName}
               </p>
@@ -113,12 +113,12 @@ export default function PublicQuotePage() {
                 Presupuesto #{String(quote.number).padStart(6, "0")}
               </h1>
               {quote.user.taxId && (
-                <p className="mt-2 text-sm text-white/80">
+                <p className="mt-2 text-sm text-primary-foreground/80">
                   CUIT: {quote.user.taxId}
                 </p>
               )}
             </div>
-            <span className="w-fit rounded-full bg-white/15 px-3 py-1.5 text-sm font-semibold">
+            <span className="w-fit rounded-full bg-primary-foreground/15 px-3 py-1.5 text-sm font-semibold">
               {statusLabel(quote.status)}
             </span>
           </div>
@@ -172,7 +172,7 @@ export default function PublicQuotePage() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-3xl border bg-white shadow-[0_16px_45px_rgb(31_41_55/0.07)]">
+        <section className="app-surface overflow-hidden">
           <div className="border-b px-5 py-5 sm:px-8">
             <h2 className="text-lg font-bold">Detalle</h2>
           </div>
@@ -346,7 +346,7 @@ function PublicState({
   return (
     <main className="grid min-h-screen place-items-center bg-background px-4">
       <section
-        className="w-full max-w-lg rounded-3xl border bg-white p-8 text-center shadow-[0_16px_45px_rgb(31_41_55/0.07)]"
+        className="app-surface w-full max-w-lg p-8 text-center"
         role="status"
       >
         <div className="mx-auto grid size-16 place-items-center rounded-2xl border border-border bg-background text-primary">

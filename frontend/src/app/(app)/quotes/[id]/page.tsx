@@ -95,7 +95,6 @@ export default function Page() {
       if (navigator.share) {
         await navigator.share({
           title: `Presupuesto #${quote.number}`,
-          text: `Te comparto el presupuesto #${quote.number}.`,
           url: publicUrl,
         });
       } else {
@@ -179,6 +178,7 @@ export default function Page() {
         </div>
       )}
 
+
       <div className="app-quote-header flex w-full flex-wrap items-center justify-between gap-3 px-6 py-6 md:px-9">
         <h1 className="text-lg font-bold uppercase md:text-xl">
           Presupuesto #{String(quote.number).padStart(6, "0")}
@@ -189,8 +189,8 @@ export default function Page() {
       </div>
 
       <section className="app-card md:p-9">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start">
-          <div className="flex min-w-0 flex-col gap-6">
+        <div className="grid gap-6 lg:grid-cols-[minmax(260px,0.48fr)_1px_minmax(0,1fr)] lg:items-stretch">
+          <div className="min-w-0">
             <div className="space-y-3 text-sm md:text-base">
               <InfoLine icon={User} value={quote.customer.name} strong />
               {quote.customer.email && (
@@ -205,8 +205,31 @@ export default function Page() {
                 </p>
               )}
             </div>
+          </div>
 
-            <div className="grid gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm lg:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+          <div className="hidden bg-border lg:block" aria-hidden="true" />
+
+          <div className="flex min-w-0 flex-col justify-between gap-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <DateInfo
+                icon={CalendarDays}
+                label="Creado"
+                value={issueDate}
+                detail={issueTime}
+              />
+              <DateInfo
+                icon={Clock3}
+                label="Vigencia"
+                value={validityDays === undefined ? "-" : `${validityDays} días`}
+                detail={
+                  quote.validUntil
+                    ? `Hasta el ${formatShortDate(quote.validUntil)}`
+                    : "-"
+                }
+              />
+            </div>
+
+            <div className="grid w-full gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm xl:grid-cols-[minmax(14rem,1fr)_auto_auto_auto]">
               {quote.activeShare && (
                 <div
                   className="flex min-w-0 items-center gap-2 px-2 py-2 text-sm font-medium text-primary"
@@ -248,24 +271,6 @@ export default function Page() {
                 {busy === "pdf" ? "Descargando..." : "Descargar PDF"}
               </Button>
             </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-            <DateInfo
-              icon={CalendarDays}
-              label="Creado"
-              value={issueDate}
-              detail={issueTime}
-            />
-            <DateInfo
-              icon={Clock3}
-              label="Vigencia"
-              value={validityDays === undefined ? "-" : `${validityDays} días`}
-              detail={
-                quote.validUntil
-                  ? `Hasta el ${formatShortDate(quote.validUntil)}`
-                  : "-"
-              }
-            />
           </div>
         </div>
 
@@ -478,7 +483,7 @@ function DateInfo({
   detail: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-border bg-background px-3 py-2.5">
+    <div className="flex min-h-24 items-center gap-3 rounded-2xl border border-border bg-background px-3 py-2.5">
       <div className="app-icon size-9 rounded-full bg-accent">
         <Icon className="size-4" />
       </div>
