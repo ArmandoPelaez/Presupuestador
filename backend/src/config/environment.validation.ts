@@ -19,6 +19,20 @@ const environmentSchema = z.object({
     .min(100)
     .max(5000)
     .default(1000),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().min(1).default('gpt-5.4-mini'),
+  AI_QUOTE_DRAFT_DESCRIPTION_MAX_LENGTH: z.coerce
+    .number()
+    .int()
+    .min(100)
+    .max(10000)
+    .default(2000),
+  AI_QUOTE_DRAFT_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .max(60000)
+    .default(15000),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

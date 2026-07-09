@@ -50,12 +50,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   return (
     <div className="min-h-screen">
-      <aside className="fixed inset-y-0 hidden w-64 flex-col border-r bg-sidebar p-4 shadow-[16px_0_45px_rgb(31_41_55/0.06)] md:flex">
+      <aside className="app-sidebar-shadow fixed inset-y-0 hidden w-64 flex-col border-r bg-sidebar p-4 md:flex">
         <div className="mb-7 flex items-center gap-3 px-2 py-3">
-          <div className="grid size-11 place-items-center rounded-xl border border-border bg-background text-primary">
+          <div className="app-brand-mark">
             <FileText className="size-6" />
           </div>
-          <h1 className="text-lg font-bold leading-tight">
+          <h1 className="font-heading text-lg font-bold leading-tight">
             Presupuesto
             <span className="block text-primary">Simple</span>
           </h1>
@@ -63,7 +63,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Nav />
         <div className="mt-auto rounded-2xl border bg-background p-3">
           <div className="mb-3 flex min-w-0 items-center gap-3">
-            <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-white">
+            <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
               {user.name
                 .split(" ")
                 .map((part) => part[0])
@@ -97,10 +97,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </SheetTrigger>
             <SheetContent side="left">
               <div className="mb-6 flex items-center gap-3">
-                <div className="grid size-11 place-items-center rounded-xl border border-border bg-background text-primary">
+                <div className="app-brand-mark">
                   <FileText className="size-6" />
                 </div>
-                <h2 className="text-lg font-bold leading-tight">
+                <h2 className="font-heading text-lg font-bold leading-tight">
                   Presupuesto
                   <span className="block text-primary">Simple</span>
                 </h2>

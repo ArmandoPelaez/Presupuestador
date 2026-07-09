@@ -5,7 +5,7 @@ import type { Page, Quote } from "@/types/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, FileText, Plus, Search } from "lucide-react";
+import { ArrowRight, FileText, Plus, Search, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -51,7 +51,7 @@ export function QuoteList() {
               />
             </div>
             <select
-              className="h-9 rounded-lg border border-border bg-white px-2.5 text-sm shadow-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/20"
+              className="form-select h-9 rounded-lg px-2.5"
               value={status}
               onChange={(e) => {
                 setStatus(e.target.value);
@@ -65,16 +65,28 @@ export function QuoteList() {
               <option value="REJECTED">Rechazado</option>
             </select>
           </div>
-          <Button
-            asChild
-            variant="action"
-            className="h-9 w-full px-3 sm:w-auto sm:self-end lg:self-auto"
-          >
-            <Link href="/quotes/new">
-              <Plus />
-              Nuevo presupuesto
-            </Link>
-          </Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:self-end lg:self-auto">
+            <Button
+              asChild
+              variant="outline"
+              className="ai-action-button h-9 w-full px-3 sm:w-auto"
+            >
+              <Link href="/quotes/new?ai=1">
+                <Sparkles />
+                Crear con IA
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="action"
+              className="h-9 w-full px-3 sm:w-auto"
+            >
+              <Link href="/quotes/new">
+                <Plus />
+                Nuevo presupuesto
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
       {!data ? (

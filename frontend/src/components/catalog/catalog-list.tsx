@@ -38,7 +38,7 @@ export function CatalogList() {
               />
             </div>
             <select
-              className="h-9 rounded-lg border border-border bg-white px-2.5 text-sm shadow-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/20"
+              className="form-select h-9 rounded-lg px-2.5"
               value={type}
               onChange={(e) => {
                 setType(e.target.value);

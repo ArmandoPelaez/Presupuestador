@@ -10,6 +10,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { AiModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     CatalogModule,
     QuotesModule,
     DashboardModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

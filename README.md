@@ -73,6 +73,21 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=su-id.apps.googleusercontent.com
 
 El frontend obtiene el ID token mediante Google Identity Services y el backend verifica firma, vencimiento, emisor y audiencia antes de aceptar la sesión. El secreto OAuth no es necesario para este flujo y no debe agregarse al frontend.
 
+## Borradores de presupuesto con IA
+
+El flujo **Crear con IA** usa `POST /api/ai/quote-drafts` desde el frontend autenticado. La clave de OpenAI vive solo en backend; el frontend nunca llama a OpenAI directamente. Configure en `backend/.env`:
+
+```env
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.4-mini
+AI_QUOTE_DRAFT_DESCRIPTION_MAX_LENGTH=2000
+AI_QUOTE_DRAFT_TIMEOUT_MS=15000
+```
+
+Si `OPENAI_API_KEY` queda vacía, la función responde con un error recuperable y el flujo manual de presupuestos permanece disponible. El borrador generado es efímero: no crea presupuesto, no reserva número, no cambia estado y no persiste ítems hasta que el usuario revise y guarde el formulario normal.
+
+Privacidad: no registrar descripciones completas, prompts, respuestas completas de OpenAI, claves, JWT, tokens públicos ni URLs compartidas. El backend solo envía candidatos activos del cliente y catálogo del propietario autenticado, limitados al contexto necesario para sugerir coincidencias.
+
 ## Producción
 
 Usar `backend/.env.production.example` como referencia, con secretos administrados fuera del repositorio, `JWT_SECRET` aleatorio y `CORS_ORIGINS` restringido. En backend ejecutar `npm ci`, `npm run prisma:deploy`, `npm run build` y `npm run start:prod`. En frontend ejecutar `npm ci`, `npm run build` y `npm start` con la URL HTTPS de la API. No registrar Authorization, contraseñas, hashes ni cuerpos de autenticación.
