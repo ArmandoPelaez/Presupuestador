@@ -86,10 +86,6 @@ AI_QUOTE_DRAFT_TIMEOUT_MS=15000
 
 Si `OPENAI_API_KEY` queda vacía, la función responde con un error recuperable y el flujo manual de presupuestos permanece disponible. El borrador generado es efímero: no crea presupuesto, no reserva número, no cambia estado y no persiste ítems hasta que el usuario revise y guarde el formulario normal.
 
-El dictado por voz de **Crear con IA** es una mejora progresiva del frontend. Solo aparece cuando el navegador expone `SpeechRecognition` o `webkitSpeechRecognition`; si no hay soporte, el ingreso escrito sigue disponible. La aplicación no usa `MediaRecorder`, no sube archivos de audio y no agrega endpoints de transcripción: el navegador convierte la voz en texto editable y el usuario puede corregirlo antes de generar el borrador.
-
-Cancelar o cerrar el modal descarta la descripción local del dictado. Generar el borrador envía solamente el texto revisado al endpoint IA existente, y aun así no guarda presupuesto, no reserva número ni persiste ítems hasta el guardado manual del formulario normal. El reconocimiento de voz depende del navegador y puede usar servicios del proveedor del navegador.
-
 Privacidad: no registrar descripciones completas, prompts, respuestas completas de OpenAI, claves, JWT, tokens públicos ni URLs compartidas. El backend solo envía candidatos activos del cliente y catálogo del propietario autenticado, limitados al contexto necesario para sugerir coincidencias.
 
 ## Producción
