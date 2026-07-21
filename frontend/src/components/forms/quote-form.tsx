@@ -2,10 +2,6 @@
 
 import { api, ApiError } from "@/lib/api";
 import { generateAiQuoteDraft } from "@/lib/ai-quote-drafts";
-import {
-  useVoiceDictation,
-  useVoiceDictationSupport,
-} from "@/lib/use-voice-dictation";
 import type {
   AiQuoteDraft,
   CatalogItem,
@@ -37,8 +33,6 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
-  Mic,
-  MicOff,
   Plus,
   ReceiptText,
   Save,
@@ -53,7 +47,6 @@ const selectClass =
   "form-select h-12 w-full px-4";
 const compactSelectClass =
   "form-select h-10 w-full px-3";
-const AI_DESCRIPTION_MAX_LENGTH = 2000;
 
 type QuoteType = CatalogItem["type"];
 type WizardStep = 1 | 2 | 3;
@@ -126,21 +119,6 @@ export function QuoteForm({
   const [aiDraftReview, setAiDraftReview] = useState<AiDraftReview | null>(
     null,
   );
-  const voiceSupport = useVoiceDictationSupport();
-  const voiceDictation = useVoiceDictation(voiceSupport.Recognition, {
-    onFinalTranscript: appendVoiceTranscript,
-  });
-
-  function appendVoiceTranscript(transcript: string) {
-    setAiDescription((current) => {
-      const separator = current.trim().length > 0 ? " " : "";
-      return `${current.trimEnd()}${separator}${transcript}`.slice(
-        0,
-        AI_DESCRIPTION_MAX_LENGTH,
-      );
-    });
-    setAiError("");
-  }
 
   useEffect(() => {
     api<Page<Customer>>("/customers?pageSize=100").then((r) =>
@@ -304,13 +282,6 @@ export function QuoteForm({
     } finally {
       setAiBusy(false);
     }
-  }
-
-  function closeAiModal() {
-    voiceDictation.stop();
-    setAiError("");
-    setAiDescription("");
-    setAiModalOpen(false);
   }
 
   function discardAiDraft() {
@@ -486,9 +457,7 @@ export function QuoteForm({
         onOpenChange={(open) => {
           if (aiBusy) return;
           setAiModalOpen(open);
-          if (!open) {
-            closeAiModal();
-          }
+          if (!open) setAiError("");
         }}
       >
         <DialogContent className="sm:max-w-xl">
@@ -500,44 +469,12 @@ export function QuoteForm({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <Label htmlFor="aiDescription">Descripción del trabajo</Label>
-              {voiceSupport.Recognition && (
-                <div className="flex items-center gap-2">
-                  {voiceDictation.state === "starting" ||
-                  voiceDictation.state === "listening" ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={aiBusy}
-                      aria-label="Detener dictado"
-                      onClick={voiceDictation.stop}
-                    >
-                      <MicOff />
-                      Detener
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={aiBusy || voiceDictation.state === "stopping"}
-                      aria-label="Mantener dictado activo"
-                      onClick={voiceDictation.start}
-                    >
-                      <Mic />
-                      Mantener dictado activo
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
+            <Label htmlFor="aiDescription">Descripción del trabajo</Label>
             <Textarea
               id="aiDescription"
               className="min-h-40"
               value={aiDescription}
-              maxLength={AI_DESCRIPTION_MAX_LENGTH}
+              maxLength={2000}
               disabled={aiBusy}
               placeholder="Ej.: Presupuesto para Cliente ABC por 12 remeras estampadas y entrega esta semana..."
               onChange={(event) => {
@@ -547,32 +484,8 @@ export function QuoteForm({
             />
             <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
               <span>El borrador no se guarda automáticamente.</span>
-              <span>
-                {aiDescription.length}/{AI_DESCRIPTION_MAX_LENGTH}
-              </span>
+              <span>{aiDescription.length}/2000</span>
             </div>
-            {voiceSupport.Recognition && voiceDictation.message && (
-              <p
-                role={voiceDictation.state === "error" ? "alert" : "status"}
-                className={
-                  voiceDictation.state === "error"
-                    ? "rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-sm text-destructive"
-                    : "rounded-lg border border-border bg-background p-2 text-sm text-muted-foreground"
-                }
-              >
-                {voiceDictation.message}
-              </p>
-            )}
-            {voiceSupport.Recognition && voiceDictation.interimTranscript && (
-              <div className="rounded-lg border border-border bg-background p-3 text-sm">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Texto provisional
-                </p>
-                <p className="mt-1 text-foreground">
-                  {voiceDictation.interimTranscript}
-                </p>
-              </div>
-            )}
             {aiError && (
               <p
                 role="alert"
@@ -587,7 +500,7 @@ export function QuoteForm({
               type="button"
               variant="outline"
               disabled={aiBusy}
-              onClick={closeAiModal}
+              onClick={() => setAiModalOpen(false)}
             >
               Cancelar
             </Button>
