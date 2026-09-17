@@ -1,28 +1,28 @@
 import { Prisma, QuoteStatus, DiscountType } from '@prisma/client';
-import pdfParse from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
+import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { PdfService } from './pdf.service';
 import type { UsersService } from '../users/users.service';
 
+PDFParse.setWorker(
+  pathToFileURL(join(dirname(require.resolve('pdf-parse')), 'pdf.worker.mjs'))
+    .href,
+);
+
 const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
 
-interface PdfPageData {
-  getTextContent: () => Promise<{
-    items: Array<{ str: string }>;
-  }>;
-}
-
 const extractPdf = async (buffer: Buffer) => {
-  const pages: string[] = [];
-  const result = await pdfParse(buffer, {
-    pagerender: async (pageData: PdfPageData) => {
-      const textContent = await pageData.getTextContent();
-      const pageText = textContent.items.map((item) => item.str).join(' ');
-      pages.push(normalizeText(pageText));
-      return pageText;
-    },
-  });
-
-  return { total: result.numpages, pages };
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const result = await parser.getText();
+    return {
+      total: result.total,
+      pages: result.pages.map((page) => normalizeText(page.text)),
+    };
+  } finally {
+    await parser.destroy();
+  }
 };
 
 const createQuote = (
