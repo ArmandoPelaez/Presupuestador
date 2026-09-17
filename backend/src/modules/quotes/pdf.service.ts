@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import { UsersService } from '../users/users.service';
+
+const PAGE_MARGIN = 48;
+const FOOTER_FONT_SIZE = 8;
+const FOOTER_GAP = 4;
+const ITEM_BLOCK_HEIGHT = 35;
+
 type PdfQuote = Awaited<
   ReturnType<import('./quotes.service').QuotesService['get']>
 >;
@@ -12,7 +18,7 @@ export class PdfService {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({
         size: 'A4',
-        margin: 48,
+        margin: PAGE_MARGIN,
         bufferPages: true,
       });
       const chunks: Buffer[] = [];
@@ -45,12 +51,12 @@ export class PdfService {
       doc.moveDown();
       this.header(doc);
       for (const item of quote.items) {
-        if (doc.y > 700) {
+        if (doc.y + ITEM_BLOCK_HEIGHT > this.contentBottom(doc)) {
           doc.addPage();
           this.header(doc);
         }
         const y = doc.y;
-        doc.fontSize(9).text(item.description, 48, y, { width: 220 });
+        doc.fontSize(9).text(item.description, PAGE_MARGIN, y, { width: 220 });
         doc.text(`${item.quantity.toString()} ${item.unit}`, 275, y, {
           width: 70,
           align: 'right',
@@ -65,7 +71,7 @@ export class PdfService {
         });
         doc.y = Math.max(doc.y, y + 30);
         doc
-          .moveTo(48, doc.y)
+          .moveTo(PAGE_MARGIN, doc.y)
           .lineTo(547, doc.y)
           .strokeColor('#e5e7eb')
           .stroke();
@@ -82,12 +88,23 @@ export class PdfService {
         doc.fontSize(9).text(quote.notes);
       }
       const range = doc.bufferedPageRange();
-      for (let i = 0; i < range.count; i++) {
+      for (let i = range.start; i < range.start + range.count; i++) {
         doc.switchToPage(i);
-        doc.fontSize(8).text(`Página ${i + 1} de ${range.count}`, 48, 800, {
-          width: 499,
-          align: 'center',
-        });
+        doc.fontSize(FOOTER_FONT_SIZE);
+        const footerHeight = doc.currentLineHeight();
+        const footerY =
+          doc.page.height - doc.page.margins.bottom - footerHeight - FOOTER_GAP;
+        const footerWidth =
+          doc.page.width - doc.page.margins.left - doc.page.margins.right;
+        doc.text(
+          `Página ${i - range.start + 1} de ${range.count}`,
+          doc.page.margins.left,
+          footerY,
+          {
+            width: footerWidth,
+            align: 'center',
+          },
+        );
       }
       doc.end();
     });
@@ -107,5 +124,15 @@ export class PdfService {
     doc.text(label, 350, y, { width: 85, align: 'right' });
     doc.text(`$ ${value}`, 440, y, { width: 105, align: 'right' });
     doc.y = y + 18;
+  }
+
+  private contentBottom(doc: PDFKit.PDFDocument): number {
+    doc.fontSize(FOOTER_FONT_SIZE);
+    return (
+      doc.page.height -
+      doc.page.margins.bottom -
+      doc.currentLineHeight() -
+      FOOTER_GAP
+    );
   }
 }
