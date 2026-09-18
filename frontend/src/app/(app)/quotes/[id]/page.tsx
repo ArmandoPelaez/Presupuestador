@@ -1,8 +1,14 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import {
+  LoadingState,
+  QueryError,
+  RefreshingState,
+} from "@/components/ui/query-state";
 import { env } from "@/env";
 import { api, ApiError } from "@/lib/api";
+import { useApiQuery } from "@/lib/use-api-query";
 import type { Quote } from "@/types/api";
 import {
   ArrowLeft,
@@ -23,7 +29,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 
 const labels = {
   DRAFT: "Borrador",
@@ -35,33 +41,32 @@ const labels = {
 export default function Page() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const [quote, setQuote] = useState<Quote>();
+  const quoteQuery = useApiQuery<Quote>(`/quotes/${id}`);
+  const quote = quoteQuery.data;
   const [busy, setBusy] = useState<"copy" | "share" | "pdf">();
   const [copied, setCopied] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [error, setError] = useState("");
 
-  const loadQuote = useCallback(
-    () => api<Quote>(`/quotes/${id}`).then(setQuote),
-    [id],
-  );
-
   async function markSentAfterSharing() {
     if (quote?.status !== "DRAFT") return;
-    const updated = await api<Quote>(`/quotes/${id}/share/copied`, {
+    await api<Quote>(`/quotes/${id}/share/copied`, {
       method: "POST",
     });
-    setQuote(updated);
+    quoteQuery.retry();
   }
 
-  useEffect(() => {
-    void loadQuote();
-  }, [loadQuote]);
-
   if (!quote) {
-    return (
-      <div className="grid min-h-64 place-items-center text-muted-foreground">
-        Cargando...
+    return quoteQuery.isLoading ? (
+      <LoadingState label="Cargando presupuesto…" />
+    ) : (
+      <div className="mx-auto w-full max-w-[1100px]">
+        <QueryError
+          error={quoteQuery.error}
+          message="No se pudo cargar el presupuesto."
+          onRetry={quoteQuery.retry}
+          retrying={quoteQuery.isLoading || quoteQuery.isRefreshing}
+        />
       </div>
     );
   }
@@ -130,7 +135,7 @@ export default function Page() {
       anchor.download = `presupuesto-${quote!.number}.pdf`;
       anchor.click();
       URL.revokeObjectURL(url);
-      await loadQuote();
+      quoteQuery.retry();
     } catch {
       setError("No se pudo descargar el PDF. Intentá nuevamente.");
     } finally {
@@ -158,6 +163,17 @@ export default function Page() {
 
   return (
     <div className="mx-auto w-full max-w-[1100px] space-y-6 pb-10">
+      {quoteQuery.isError && (
+        <QueryError
+          error={quoteQuery.error}
+          message="No se pudo actualizar el presupuesto."
+          onRetry={quoteQuery.retry}
+          retrying={quoteQuery.isLoading || quoteQuery.isRefreshing}
+        />
+      )}
+      {quoteQuery.isRefreshing && (
+        <RefreshingState label="Actualizando presupuesto…" />
+      )}
       <Button asChild variant="link" className="h-auto px-0 text-muted-foreground">
         <Link href="/quotes">
           <ArrowLeft />

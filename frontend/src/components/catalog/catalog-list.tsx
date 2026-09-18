@@ -1,24 +1,30 @@
 "use client";
 
-import { api } from "@/lib/api";
-import type { CatalogItem, Page } from "@/types/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  LoadingState,
+  QueryError,
+  RefreshingState,
+} from "@/components/ui/query-state";
+import { Input } from "@/components/ui/input";
+import { useApiQuery } from "@/lib/use-api-query";
+import type { CatalogItem, Page } from "@/types/api";
 import { ArrowRight, Package, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 export function CatalogList() {
-  const [data, setData] = useState<Page<CatalogItem>>();
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [page, setPage] = useState(1);
-  useEffect(() => {
-    api<Page<CatalogItem>>(
+  const path = useMemo(
+    () =>
       `/catalog-items?page=${page}&pageSize=10&search=${encodeURIComponent(search)}${type ? `&type=${type}` : ""}`,
-    ).then(setData);
-  }, [page, search, type]);
+    [page, search, type],
+  );
+  const query = useApiQuery<Page<CatalogItem>>(path);
+  const data = query.data;
 
   return (
     <div className="space-y-3">
@@ -31,8 +37,8 @@ export function CatalogList() {
                 className="h-9 pl-9"
                 placeholder="Buscar productos o servicios"
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
+                onChange={(event) => {
+                  setSearch(event.target.value);
                   setPage(1);
                 }}
               />
@@ -40,8 +46,8 @@ export function CatalogList() {
             <select
               className="form-select h-9 rounded-lg px-2.5"
               value={type}
-              onChange={(e) => {
-                setType(e.target.value);
+              onChange={(event) => {
+                setType(event.target.value);
                 setPage(1);
               }}
             >
@@ -62,13 +68,17 @@ export function CatalogList() {
           </Button>
         </CardContent>
       </Card>
-      {!data ? (
-        <Card className="py-0">
-          <CardContent className="py-10 text-center text-muted-foreground">
-            Cargando…
-          </CardContent>
-        </Card>
-      ) : data.items.length === 0 ? (
+
+      {query.isLoading && !data ? (
+        <LoadingState label="Cargando catálogo…" />
+      ) : query.isError && !data ? (
+        <QueryError
+          error={query.error}
+          message="No se pudo cargar el catálogo."
+          onRetry={query.retry}
+          retrying={query.isLoading || query.isRefreshing}
+        />
+      ) : data?.items.length === 0 ? (
         <Card className="py-0">
           <CardContent className="py-12 text-center">
             <Package className="mx-auto mb-3 size-9 text-primary/45" />
@@ -78,7 +88,7 @@ export function CatalogList() {
             </Button>
           </CardContent>
         </Card>
-      ) : (
+      ) : data ? (
         <Card className="overflow-x-auto py-0">
           <table className="w-full min-w-[500px] text-left text-sm sm:min-w-[600px]">
             <thead className="border-b bg-background text-xs uppercase tracking-wider text-muted-foreground">
@@ -119,44 +129,49 @@ export function CatalogList() {
             </tbody>
           </table>
         </Card>
+      ) : null}
+
+      {data && query.isError && (
+        <QueryError
+          error={query.error}
+          message="No se pudo actualizar el catálogo."
+          onRetry={query.retry}
+          retrying={query.isLoading || query.isRefreshing}
+        />
       )}
 
-      <Pagination page={page} data={data} setPage={setPage} />
-    </div>
-  );
-}
+      {data && query.isRefreshing && (
+        <div className="flex justify-end">
+          <RefreshingState label="Actualizando catálogo…" />
+        </div>
+      )}
 
-function Pagination({
-  page,
-  data,
-  setPage,
-}: {
-  page: number;
-  data?: Page<CatalogItem>;
-  setPage: React.Dispatch<React.SetStateAction<number>>;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={page <= 1}
-        onClick={() => setPage((value) => value - 1)}
-      >
-        Anterior
-      </Button>
-      <span className="text-sm text-muted-foreground">
-        Página {data?.meta.page ?? 1} de{" "}
-        {Math.max(data?.meta.totalPages ?? 1, 1)}
-      </span>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={!data || page >= data.meta.totalPages}
-        onClick={() => setPage((value) => value + 1)}
-      >
-        Siguiente
-      </Button>
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page <= 1 || query.isLoading || query.isRefreshing}
+          onClick={() => setPage((value) => value - 1)}
+        >
+          Anterior
+        </Button>
+        <span className="text-sm text-muted-foreground">
+          Página {data?.meta.page ?? page} de {Math.max(data?.meta.totalPages ?? 1, 1)}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={
+            !data ||
+            page >= data.meta.totalPages ||
+            query.isLoading ||
+            query.isRefreshing
+          }
+          onClick={() => setPage((value) => value + 1)}
+        >
+          Siguiente
+        </Button>
+      </div>
     </div>
   );
 }

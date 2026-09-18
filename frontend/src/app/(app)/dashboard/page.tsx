@@ -1,10 +1,15 @@
 "use client";
 
-import { api } from "@/lib/api";
-import type { Page, Quote } from "@/types/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  LoadingState,
+  QueryError,
+  RefreshingState,
+} from "@/components/ui/query-state";
+import { useApiQuery } from "@/lib/use-api-query";
+import type { Page, Quote } from "@/types/api";
 import {
   ArrowRight,
   CheckCircle2,
@@ -15,7 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 type Summary = {
   counts: Record<string, number>;
@@ -41,47 +46,35 @@ const badgeStyles: Record<string, string> = {
 };
 
 export default function Page() {
-  const [d, setD] = useState<Summary>();
-  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<Quote["status"] | "ALL">(
     "ALL",
   );
   const [quotePage, setQuotePage] = useState(1);
-  const [quoteMeta, setQuoteMeta] = useState<Page<Quote>["meta"]>();
-  const [loadingQuotes, setLoadingQuotes] = useState(true);
-  const [quotesError, setQuotesError] = useState("");
-
-  useEffect(() => {
-    api<Summary>("/dashboard/summary").then(setD);
-  }, []);
-
-  useEffect(() => {
-    let ignore = false;
+  const summaryQuery = useApiQuery<Summary>("/dashboard/summary");
+  const quotePath = useMemo(() => {
     const statusQuery =
       selectedStatus === "ALL" ? "" : `&status=${selectedStatus}`;
-
-    api<Page<Quote>>(`/quotes?page=${quotePage}&pageSize=10${statusQuery}`)
-      .then((result) => {
-        if (ignore) return;
-        setQuotes(result.items);
-        setQuoteMeta(result.meta);
-        setQuotesError("");
-      })
-      .catch(() => {
-        if (!ignore) setQuotesError("No se pudieron cargar los presupuestos.");
-      })
-      .finally(() => {
-        if (!ignore) setLoadingQuotes(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
+    return `/quotes?page=${quotePage}&pageSize=10${statusQuery}`;
   }, [quotePage, selectedStatus]);
+  const quoteQuery = useApiQuery<Page<Quote>>(quotePath);
+  const d = summaryQuery.data;
+  const quotes = quoteQuery.data?.items ?? [];
+  const quoteMeta = quoteQuery.data?.meta;
 
-  if (!d) {
+  if (summaryQuery.isLoading && !d) {
+    return <LoadingState label="Cargando panel…" />;
+  }
+
+  if (summaryQuery.isError && !d) {
     return (
-      <div className="grid min-h-64 place-items-center">Cargando panel…</div>
+      <div className="mx-auto w-full max-w-[1100px]">
+        <QueryError
+          error={summaryQuery.error}
+          message="No se pudo cargar el panel."
+          onRetry={summaryQuery.retry}
+          retrying={summaryQuery.isLoading || summaryQuery.isRefreshing}
+        />
+      </div>
     );
   }
 
@@ -95,42 +88,41 @@ export default function Page() {
     {
       status: "ALL",
       label: "Todos",
-      value: d.totalQuotes,
+      value: d?.totalQuotes ?? 0,
       icon: FileText,
       color: "bg-background text-primary border border-border",
     },
     {
       status: "SENT",
       label: "Enviados",
-      value: d.counts.SENT ?? 0,
+      value: d?.counts.SENT ?? 0,
       icon: Send,
       color: "bg-background text-primary border border-border",
     },
     {
       status: "APPROVED",
       label: "Aprobados",
-      value: d.counts.APPROVED ?? 0,
+      value: d?.counts.APPROVED ?? 0,
       icon: CheckCircle2,
       color: "bg-background text-[var(--success)] border border-border",
     },
     {
       status: "REJECTED",
       label: "Rechazados",
-      value: d.counts.REJECTED ?? 0,
+      value: d?.counts.REJECTED ?? 0,
       icon: XCircle,
       color: "bg-background text-muted-foreground border border-border",
     },
     {
       status: "DRAFT",
       label: "Borradores",
-      value: d.counts.DRAFT ?? 0,
+      value: d?.counts.DRAFT ?? 0,
       icon: Clock3,
       color: "bg-background text-muted-foreground border border-border",
     },
-  ] as const;
+  ];
 
   function filterQuotes(status: Quote["status"] | "ALL") {
-    setLoadingQuotes(true);
     setSelectedStatus(status);
     setQuotePage(1);
   }
@@ -145,6 +137,15 @@ export default function Page() {
           Resumen de tu actividad comercial
         </p>
       </div>
+
+      {summaryQuery.isError && d && (
+        <QueryError
+          error={summaryQuery.error}
+          message="No se pudo actualizar el resumen del panel."
+          onRetry={summaryQuery.retry}
+          retrying={summaryQuery.isLoading || summaryQuery.isRefreshing}
+        />
+      )}
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {metrics.map(({ status, label, value, icon: Icon, color }) => (
@@ -202,25 +203,20 @@ export default function Page() {
           </div>
         </div>
 
-        {loadingQuotes ? (
-          <Card className="py-0">
-            <CardContent className="py-10 text-center text-muted-foreground">
-              Cargando presupuestos…
-            </CardContent>
-          </Card>
-        ) : quotesError ? (
-          <Card className="py-0">
-            <CardContent className="py-10 text-center text-destructive">
-              {quotesError}
-            </CardContent>
-          </Card>
+        {quoteQuery.isLoading && !quoteQuery.data ? (
+          <LoadingState label="Cargando presupuestos…" />
+        ) : quoteQuery.isError && !quoteQuery.data ? (
+          <QueryError
+            error={quoteQuery.error}
+            message="No se pudieron cargar los presupuestos."
+            onRetry={quoteQuery.retry}
+            retrying={quoteQuery.isLoading || quoteQuery.isRefreshing}
+          />
         ) : quotes.length === 0 ? (
           <Card className="py-0">
             <CardContent className="py-10 text-center">
               <FileText className="mx-auto mb-3 size-9 text-primary/45" />
-              <p className="font-medium">
-                No hay presupuestos en esta categoría
-              </p>
+              <p className="font-medium">No hay presupuestos en esta categoría</p>
             </CardContent>
           </Card>
         ) : (
@@ -277,32 +273,49 @@ export default function Page() {
           </Card>
         )}
 
+        {quoteQuery.data && quoteQuery.isError && (
+          <div className="mt-3">
+            <QueryError
+              error={quoteQuery.error}
+              message="No se pudo actualizar la lista de presupuestos."
+              onRetry={quoteQuery.retry}
+              retrying={quoteQuery.isLoading || quoteQuery.isRefreshing}
+            />
+          </div>
+        )}
+
+        {quoteQuery.data && quoteQuery.isRefreshing && (
+          <div className="mt-3 flex justify-end">
+            <RefreshingState label="Actualizando presupuestos…" />
+          </div>
+        )}
+
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-end">
           <Button
             variant="outline"
             size="sm"
-            disabled={quotePage <= 1 || loadingQuotes}
-            onClick={() => {
-              setLoadingQuotes(true);
-              setQuotePage((value) => value - 1);
-            }}
+            disabled={
+              quotePage <= 1 ||
+              quoteQuery.isLoading ||
+              quoteQuery.isRefreshing
+            }
+            onClick={() => setQuotePage((value) => value - 1)}
           >
             Anterior
           </Button>
           <span className="text-sm text-muted-foreground">
-            Página {quoteMeta?.page ?? quotePage} de{" "}
-            {Math.max(quoteMeta?.totalPages ?? 1, 1)}
+            Página {quoteMeta?.page ?? quotePage} de {Math.max(quoteMeta?.totalPages ?? 1, 1)}
           </span>
           <Button
             variant="outline"
             size="sm"
             disabled={
-              loadingQuotes || !quoteMeta || quotePage >= quoteMeta.totalPages
+              quoteQuery.isLoading ||
+              quoteQuery.isRefreshing ||
+              !quoteMeta ||
+              quotePage >= quoteMeta.totalPages
             }
-            onClick={() => {
-              setLoadingQuotes(true);
-              setQuotePage((value) => value + 1);
-            }}
+            onClick={() => setQuotePage((value) => value + 1)}
           >
             Siguiente
           </Button>
