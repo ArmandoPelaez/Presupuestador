@@ -1,13 +1,18 @@
 "use client";
 
-import { api } from "@/lib/api";
-import type { Page, Quote } from "@/types/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  LoadingState,
+  QueryError,
+  RefreshingState,
+} from "@/components/ui/query-state";
+import { Input } from "@/components/ui/input";
+import { useApiQuery } from "@/lib/use-api-query";
+import type { Page, Quote } from "@/types/api";
 import { ArrowRight, FileText, Plus, Search, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 const statusLabel = {
   DRAFT: "Borrador",
@@ -23,15 +28,16 @@ const statusStyle = {
 };
 
 export function QuoteList() {
-  const [data, setData] = useState<Page<Quote>>();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
-  useEffect(() => {
-    api<Page<Quote>>(
+  const path = useMemo(
+    () =>
       `/quotes?page=${page}&pageSize=10&search=${encodeURIComponent(search)}${status ? `&status=${status}` : ""}`,
-    ).then(setData);
-  }, [page, search, status]);
+    [page, search, status],
+  );
+  const query = useApiQuery<Page<Quote>>(path);
+  const data = query.data;
 
   return (
     <div className="space-y-3">
@@ -44,8 +50,8 @@ export function QuoteList() {
                 className="h-9 pl-9"
                 placeholder="Buscar cliente o notas"
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
+                onChange={(event) => {
+                  setSearch(event.target.value);
                   setPage(1);
                 }}
               />
@@ -53,8 +59,8 @@ export function QuoteList() {
             <select
               className="form-select h-9 rounded-lg px-2.5"
               value={status}
-              onChange={(e) => {
-                setStatus(e.target.value);
+              onChange={(event) => {
+                setStatus(event.target.value);
                 setPage(1);
               }}
             >
@@ -89,13 +95,17 @@ export function QuoteList() {
           </div>
         </CardContent>
       </Card>
-      {!data ? (
-        <Card className="py-0">
-          <CardContent className="py-10 text-center text-muted-foreground">
-            Cargando…
-          </CardContent>
-        </Card>
-      ) : data.items.length === 0 ? (
+
+      {query.isLoading && !data ? (
+        <LoadingState label="Cargando presupuestos…" />
+      ) : query.isError && !data ? (
+        <QueryError
+          error={query.error}
+          message="No se pudieron cargar los presupuestos."
+          onRetry={query.retry}
+          retrying={query.isLoading || query.isRefreshing}
+        />
+      ) : data?.items.length === 0 ? (
         <Card className="py-0">
           <CardContent className="py-12 text-center">
             <FileText className="mx-auto mb-3 size-9 text-primary/45" />
@@ -105,7 +115,7 @@ export function QuoteList() {
             </Button>
           </CardContent>
         </Card>
-      ) : (
+      ) : data ? (
         <Card className="overflow-x-auto py-0">
           <table className="w-full min-w-[600px] text-left text-sm md:min-w-[720px]">
             <thead className="border-b bg-background text-xs uppercase tracking-wider text-muted-foreground">
@@ -157,25 +167,44 @@ export function QuoteList() {
             </tbody>
           </table>
         </Card>
+      ) : null}
+
+      {data && query.isError && (
+        <QueryError
+          error={query.error}
+          message="No se pudo actualizar la lista de presupuestos."
+          onRetry={query.retry}
+          retrying={query.isLoading || query.isRefreshing}
+        />
+      )}
+
+      {data && query.isRefreshing && (
+        <div className="flex justify-end">
+          <RefreshingState label="Actualizando presupuestos…" />
+        </div>
       )}
 
       <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
         <Button
           variant="outline"
           size="sm"
-          disabled={page <= 1}
+          disabled={page <= 1 || query.isLoading || query.isRefreshing}
           onClick={() => setPage((value) => value - 1)}
         >
           Anterior
         </Button>
         <span className="text-sm text-muted-foreground">
-          Página {data?.meta.page ?? 1} de{" "}
-          {Math.max(data?.meta.totalPages ?? 1, 1)}
+          Página {data?.meta.page ?? page} de {Math.max(data?.meta.totalPages ?? 1, 1)}
         </span>
         <Button
           variant="outline"
           size="sm"
-          disabled={!data || page >= data.meta.totalPages}
+          disabled={
+            !data ||
+            page >= data.meta.totalPages ||
+            query.isLoading ||
+            query.isRefreshing
+          }
           onClick={() => setPage((value) => value + 1)}
         >
           Siguiente

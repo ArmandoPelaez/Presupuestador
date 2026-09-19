@@ -1,13 +1,14 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import type { Quote } from "@/types/api";
 import Page from "./page";
 
-vi.mock("@/lib/api", () => ({
-  api: vi.fn(),
-}));
+vi.mock("@/lib/api", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
+  return { ...actual, api: vi.fn() };
+});
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "quote-1" }),
@@ -110,5 +111,27 @@ describe("Quote detail share action", () => {
         "https://presupuestador.test/p/public-token",
       ),
     );
+  });
+
+  it("permite reintentar la carga del presupuesto", async () => {
+    let attempts = 0;
+    vi.mocked(api).mockImplementation(async (path) => {
+      if (path !== "/quotes/quote-1") {
+        throw new Error(`Unexpected API call: ${path}`);
+      }
+      attempts += 1;
+      if (attempts === 1) throw new ApiError("Servidor no disponible", 503);
+      return quote;
+    });
+
+    render(<Page />);
+
+    expect(
+      await screen.findByText("No se pudo cargar el presupuesto."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Reintentar/ }));
+
+    await screen.findByRole("button", { name: /Compartir/ });
+    expect(attempts).toBe(2);
   });
 });

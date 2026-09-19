@@ -1,24 +1,29 @@
 "use client";
 
-import { api } from "@/lib/api";
-import type { Customer, Page } from "@/types/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  LoadingState,
+  QueryError,
+  RefreshingState,
+} from "@/components/ui/query-state";
+import { Input } from "@/components/ui/input";
+import { useApiQuery } from "@/lib/use-api-query";
+import type { Customer, Page } from "@/types/api";
 import { ArrowRight, Plus, Search, Users } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 export function CustomerList() {
-  const [data, setData] = useState<Page<Customer>>();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-
-  useEffect(() => {
-    api<Page<Customer>>(
+  const path = useMemo(
+    () =>
       `/customers?page=${page}&pageSize=10&search=${encodeURIComponent(search)}`,
-    ).then(setData);
-  }, [page, search]);
+    [page, search],
+  );
+  const query = useApiQuery<Page<Customer>>(path);
+  const data = query.data;
 
   return (
     <div className="space-y-3">
@@ -31,8 +36,8 @@ export function CustomerList() {
               aria-label="Buscar clientes"
               placeholder="Buscar por nombre, empresa, email o CUIT"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
+              onChange={(event) => {
+                setSearch(event.target.value);
                 setPage(1);
               }}
             />
@@ -50,16 +55,23 @@ export function CustomerList() {
         </CardContent>
       </Card>
 
-      {!data ? (
-        <Loading />
-      ) : data.items.length === 0 ? (
+      {query.isLoading && !data ? (
+        <LoadingState label="Cargando clientes…" />
+      ) : query.isError && !data ? (
+        <QueryError
+          error={query.error}
+          message="No se pudieron cargar los clientes."
+          onRetry={query.retry}
+          retrying={query.isLoading || query.isRefreshing}
+        />
+      ) : data?.items.length === 0 ? (
         <Empty
           icon={Users}
           text="No hay clientes que coincidan"
           href="/clients/new"
           action="Crear el primero"
         />
-      ) : (
+      ) : data ? (
         <Card className="overflow-x-auto py-0">
           <table className="w-full min-w-[540px] text-left text-sm md:min-w-[680px]">
             <thead className="border-b bg-background text-xs uppercase tracking-wider text-muted-foreground">
@@ -107,25 +119,44 @@ export function CustomerList() {
             </tbody>
           </table>
         </Card>
+      ) : null}
+
+      {data && query.isError && (
+        <QueryError
+          error={query.error}
+          message="No se pudo actualizar la lista de clientes."
+          onRetry={query.retry}
+          retrying={query.isLoading || query.isRefreshing}
+        />
+      )}
+
+      {data && query.isRefreshing && (
+        <div className="flex justify-end">
+          <RefreshingState label="Actualizando clientes…" />
+        </div>
       )}
 
       <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
         <Button
           variant="outline"
           size="sm"
-          disabled={page <= 1}
+          disabled={page <= 1 || query.isLoading || query.isRefreshing}
           onClick={() => setPage((value) => value - 1)}
         >
           Anterior
         </Button>
         <span className="text-sm text-muted-foreground">
-          Página {data?.meta.page ?? 1} de{" "}
-          {Math.max(data?.meta.totalPages ?? 1, 1)}
+          Página {data?.meta.page ?? page} de {Math.max(data?.meta.totalPages ?? 1, 1)}
         </span>
         <Button
           variant="outline"
           size="sm"
-          disabled={!data || page >= data.meta.totalPages}
+          disabled={
+            !data ||
+            page >= data.meta.totalPages ||
+            query.isLoading ||
+            query.isRefreshing
+          }
           onClick={() => setPage((value) => value + 1)}
         >
           Siguiente
@@ -135,15 +166,6 @@ export function CustomerList() {
   );
 }
 
-function Loading() {
-  return (
-    <Card className="py-0">
-      <CardContent className="py-10 text-center text-muted-foreground">
-        Cargando…
-      </CardContent>
-    </Card>
-  );
-}
 function Empty({
   icon: Icon,
   text,

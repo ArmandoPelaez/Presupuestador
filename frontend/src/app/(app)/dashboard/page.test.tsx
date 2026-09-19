@@ -1,13 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { api, ApiError } from "@/lib/api";
 import type { Page, Quote } from "@/types/api";
-import { api } from "@/lib/api";
 import PageComponent from "./page";
 
-vi.mock("@/lib/api", () => ({
-  api: vi.fn(),
-}));
+vi.mock("@/lib/api", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
+  return { ...actual, api: vi.fn() };
+});
 
 const quote: Quote = {
   id: "quote-1",
@@ -26,24 +27,29 @@ const quote: Quote = {
   items: [],
 };
 
+function summary() {
+  return {
+    counts: { DRAFT: 12, SENT: 1, APPROVED: 0, REJECTED: 0 },
+    totals: {},
+    totalQuotes: 13,
+    customers: 1,
+    catalogItems: 1,
+    recent: [],
+  };
+}
+
+function quotePage(page = 1) {
+  return {
+    items: [quote],
+    meta: { page, pageSize: 10, total: 13, totalPages: 2 },
+  } as Page<Quote>;
+}
+
 describe("Dashboard", () => {
   beforeEach(() => {
     vi.mocked(api).mockImplementation(async (path) => {
-      if (path === "/dashboard/summary") {
-        return {
-          counts: { DRAFT: 12, SENT: 1, APPROVED: 0, REJECTED: 0 },
-          totals: {},
-          totalQuotes: 13,
-          customers: 1,
-          catalogItems: 1,
-          recent: [],
-        };
-      }
-
-      return {
-        items: [quote],
-        meta: { page: 1, pageSize: 10, total: 13, totalPages: 2 },
-      } as Page<Quote>;
+      if (path === "/dashboard/summary") return summary();
+      return quotePage();
     });
   });
 
@@ -51,18 +57,48 @@ describe("Dashboard", () => {
     render(<PageComponent />);
 
     await screen.findByText("Cliente prueba");
-    expect(api).toHaveBeenCalledWith("/quotes?page=1&pageSize=10");
+    expect(api).toHaveBeenCalledWith(
+      "/quotes?page=1&pageSize=10",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Siguiente" }));
     await waitFor(() =>
-      expect(api).toHaveBeenCalledWith("/quotes?page=2&pageSize=10"),
+      expect(api).toHaveBeenCalledWith(
+        "/quotes?page=2&pageSize=10",
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      ),
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Enviados/ }));
     await waitFor(() =>
       expect(api).toHaveBeenCalledWith(
         "/quotes?page=1&pageSize=10&status=SENT",
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
       ),
     );
+  });
+
+  it("permite reintentar la carga de presupuestos después de un error", async () => {
+    let quoteAttempts = 0;
+    vi.mocked(api).mockImplementation(async (path) => {
+      if (path === "/dashboard/summary") return summary();
+
+      quoteAttempts += 1;
+      if (quoteAttempts === 1) {
+        throw new ApiError("Servidor no disponible", 503);
+      }
+      return quotePage();
+    });
+
+    render(<PageComponent />);
+
+    expect(
+      await screen.findByText("No se pudieron cargar los presupuestos."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Reintentar/ }));
+
+    await screen.findByText("Cliente prueba");
+    expect(quoteAttempts).toBe(2);
   });
 });

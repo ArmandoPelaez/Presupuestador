@@ -1,36 +1,49 @@
 "use client";
-import { api } from "@/lib/api";
-import type { Customer } from "@/types/api";
-import { Button } from "@/components/ui/button";
+
 import { CustomerForm } from "@/components/forms/customer-form";
 import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { LoadingState, QueryError } from "@/components/ui/query-state";
+import { api } from "@/lib/api";
+import { useApiQuery } from "@/lib/use-api-query";
+import type { Customer } from "@/types/api";
 import { Pencil, Trash2, UserRound } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+
 export default function Page() {
   const { id } = useParams<{ id: string }>();
-  const [customer, setCustomer] = useState<Customer>();
+  const customerQuery = useApiQuery<Customer>(`/customers/${id}`);
+  const customer = customerQuery.data;
   const [editing, setEditing] = useState(false);
-  useEffect(() => {
-    api<Customer>(`/customers/${id}`).then(setCustomer);
-  }, [id]);
-  if (!customer)
-    return (
-      <div className="grid min-h-64 place-items-center text-muted-foreground">
-        Cargando…
+
+  if (!customer) {
+    return customerQuery.isLoading ? (
+      <LoadingState label="Cargando cliente…" />
+    ) : (
+      <div className="mx-auto max-w-4xl">
+        <QueryError
+          error={customerQuery.error}
+          message="No se pudo cargar el cliente."
+          onRetry={customerQuery.retry}
+          retrying={customerQuery.isLoading || customerQuery.isRefreshing}
+        />
       </div>
     );
+  }
+
   async function deactivate() {
     if (
       confirm(
         "¿Desactivar este cliente? Podrás seguir consultando su historial.",
       )
-    )
-      setCustomer(
-        await api<Customer>(`/customers/${id}`, { method: "DELETE" }),
-      );
+    ) {
+      await api<Customer>(`/customers/${id}`, { method: "DELETE" });
+      customerQuery.retry();
+    }
   }
+
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader
@@ -82,6 +95,7 @@ export default function Page() {
     </div>
   );
 }
+
 function Info({ label, value }: { label: string; value?: string }) {
   return (
     <div>
