@@ -8,6 +8,10 @@ import {
   RefreshingState,
 } from "@/components/ui/query-state";
 import { Input } from "@/components/ui/input";
+import {
+  SEARCH_DEBOUNCE_MS,
+  useDebouncedValue,
+} from "@/lib/use-debounced-value";
 import { useApiQuery } from "@/lib/use-api-query";
 import type { Customer, Page } from "@/types/api";
 import { ArrowRight, Plus, Search, Users } from "lucide-react";
@@ -17,10 +21,16 @@ import { useMemo, useState } from "react";
 export function CustomerList() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const debouncedSearch = useDebouncedValue(
+    search,
+    SEARCH_DEBOUNCE_MS,
+    () => setPage(1),
+  );
+
   const path = useMemo(
     () =>
-      `/customers?page=${page}&pageSize=10&search=${encodeURIComponent(search)}`,
-    [page, search],
+      `/customers?page=${page}&pageSize=10&search=${encodeURIComponent(debouncedSearch)}`,
+    [debouncedSearch, page],
   );
   const query = useApiQuery<Page<Customer>>(path);
   const data = query.data;
@@ -38,7 +48,6 @@ export function CustomerList() {
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
-                setPage(1);
               }}
             />
           </div>

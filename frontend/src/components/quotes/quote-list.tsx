@@ -8,6 +8,10 @@ import {
   RefreshingState,
 } from "@/components/ui/query-state";
 import { Input } from "@/components/ui/input";
+import {
+  SEARCH_DEBOUNCE_MS,
+  useDebouncedValue,
+} from "@/lib/use-debounced-value";
 import { useApiQuery } from "@/lib/use-api-query";
 import type { Page, Quote } from "@/types/api";
 import { ArrowRight, FileText, Plus, Search, Sparkles } from "lucide-react";
@@ -31,10 +35,16 @@ export function QuoteList() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
+  const debouncedSearch = useDebouncedValue(
+    search,
+    SEARCH_DEBOUNCE_MS,
+    () => setPage(1),
+  );
+
   const path = useMemo(
     () =>
-      `/quotes?page=${page}&pageSize=10&search=${encodeURIComponent(search)}${status ? `&status=${status}` : ""}`,
-    [page, search, status],
+      `/quotes?page=${page}&pageSize=10&search=${encodeURIComponent(debouncedSearch)}${status ? `&status=${status}` : ""}`,
+    [debouncedSearch, page, status],
   );
   const query = useApiQuery<Page<Quote>>(path);
   const data = query.data;
@@ -49,11 +59,10 @@ export function QuoteList() {
               <Input
                 className="h-9 pl-9"
                 placeholder="Buscar cliente o notas"
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
-                }}
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+              }}
               />
             </div>
             <select
