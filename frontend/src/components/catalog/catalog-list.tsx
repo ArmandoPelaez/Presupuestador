@@ -8,6 +8,10 @@ import {
   RefreshingState,
 } from "@/components/ui/query-state";
 import { Input } from "@/components/ui/input";
+import {
+  SEARCH_DEBOUNCE_MS,
+  useDebouncedValue,
+} from "@/lib/use-debounced-value";
 import { useApiQuery } from "@/lib/use-api-query";
 import type { CatalogItem, Page } from "@/types/api";
 import { ArrowRight, Package, Plus, Search } from "lucide-react";
@@ -18,10 +22,16 @@ export function CatalogList() {
   const [search, setSearch] = useState("");
   const [type, setType] = useState("");
   const [page, setPage] = useState(1);
+  const debouncedSearch = useDebouncedValue(
+    search,
+    SEARCH_DEBOUNCE_MS,
+    () => setPage(1),
+  );
+
   const path = useMemo(
     () =>
-      `/catalog-items?page=${page}&pageSize=10&search=${encodeURIComponent(search)}${type ? `&type=${type}` : ""}`,
-    [page, search, type],
+      `/catalog-items?page=${page}&pageSize=10&search=${encodeURIComponent(debouncedSearch)}${type ? `&type=${type}` : ""}`,
+    [debouncedSearch, page, type],
   );
   const query = useApiQuery<Page<CatalogItem>>(path);
   const data = query.data;
@@ -36,11 +46,10 @@ export function CatalogList() {
               <Input
                 className="h-9 pl-9"
                 placeholder="Buscar productos o servicios"
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
-                }}
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+              }}
               />
             </div>
             <select
